@@ -10,6 +10,7 @@ const wss = new WebSocketServer({ server })
 // In-memory state
 const games = new Map() // gameNumber -> { guesses: [], won: false, winner: null }
 const clients = new Map() // gameNumber -> Set of ws connections
+const sessionScores = {} // player -> total points across all games
 
 function getOrCreateGame (gameNumber) {
   if (!games.has(gameNumber)) {
@@ -65,7 +66,8 @@ function stateMessage (gameNumber) {
     won: game.won,
     winner: game.winner,
     players: getPlayers(gameNumber),
-    scores: calcScores(game.guesses)
+    scores: calcScores(game.guesses),
+    sessionScores
   }
 }
 
@@ -156,6 +158,11 @@ wss.on('connection', (ws) => {
       game.guesses.push({ word: lemma, distance, player, timestamp: Date.now() })
       game.guesses.sort((a, b) => a.distance - b.distance)
 
+      // Update session scores
+      const pts = calcPoints(distance)
+      if (!sessionScores[player]) sessionScores[player] = 0
+      sessionScores[player] += pts
+
       // Send result feedback to the guesser
       ws.send(JSON.stringify({ type: 'guessResult', word: lemma, distance }))
 
@@ -168,7 +175,8 @@ wss.on('connection', (ws) => {
           winner: player,
           word: lemma,
           guesses: game.guesses,
-          scores: calcScores(game.guesses)
+          scores: calcScores(game.guesses),
+          sessionScores
         })
       } else {
         broadcast(gameNumber, stateMessage(gameNumber))

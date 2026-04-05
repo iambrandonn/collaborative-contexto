@@ -336,7 +336,7 @@
       position: absolute;
       left: 1rem;
       right: 1rem;
-      top: -0.5rem;
+      top: -0.35rem;
       transform: translateY(-100%);
       font-size: 0.85rem;
       font-weight: 600;
@@ -557,11 +557,19 @@
       <div class="win-word" id="win-word"></div>
       <div class="win-subtitle" id="win-subtitle"></div>
       <div class="win-meta" id="win-meta"></div>
+      <div class="card-title" style="margin-top:0.5rem;">This Game</div>
       <table class="score-table" id="win-score-table">
         <thead>
           <tr><th>Player</th><th>Score</th></tr>
         </thead>
         <tbody id="win-score-body"></tbody>
+      </table>
+      <div class="card-title" style="margin-top:0.5rem;">Session Total</div>
+      <table class="score-table">
+        <thead>
+          <tr><th>Player</th><th>Score</th></tr>
+        </thead>
+        <tbody id="win-session-score-body"></tbody>
       </table>
       <button class="btn btn-primary" id="play-another-btn">Play Another Game</button>
     </div>
@@ -639,12 +647,22 @@
       </div>
 
       <div class="card">
-        <div class="card-title">Scoreboard</div>
+        <div class="card-title">This Game</div>
         <table class="score-table">
           <thead>
             <tr><th>Player</th><th>Score</th></tr>
           </thead>
           <tbody id="score-body"></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Session Total</div>
+        <table class="score-table">
+          <thead>
+            <tr><th>Player</th><th>Score</th></tr>
+          </thead>
+          <tbody id="session-score-body"></tbody>
         </table>
       </div>
     </div>
@@ -695,20 +713,13 @@
 
     // ── Guess result toast ────────────────────────────────────────────
     let toastTimer = null
-    function toastBg (distance) {
-      if (distance === 0) return '#fef9c3'
-      if (distance <= 10) return '#dcfce7'
-      if (distance <= 100) return '#ecfccb'
-      if (distance <= 300) return '#fff7ed'
-      return '#fef2f2'
-    }
 
     function showGuessResult (word, distance) {
       const el = document.getElementById('guess-toast')
       const color = distColor(distance)
       const pts = calcPoints(distance)
-      el.style.background = toastBg(distance)
-      el.style.border = '1px solid ' + color
+      el.style.background = '#eef2ff'
+      el.style.border = '1px solid #c7d2fe'
       el.style.color = 'var(--text)'
       el.innerHTML = '<span style="font-weight:800;color:' + color + '">#' + distance + '</span> ' +
         word + (pts > 0 ? ' <span style="color:var(--text-muted)">(+' + pts + ' pts)</span>' : '')
@@ -843,6 +854,7 @@
         msg.guesses.length + ' total ' + (msg.guesses.length === 1 ? 'guess' : 'guesses')
 
       renderScoreboard(msg.scores, 'win-score-body')
+      if (msg.sessionScores) renderScoreboard(msg.sessionScores, 'win-session-score-body')
 
       document.getElementById('win-overlay').classList.remove('hidden')
 
@@ -859,6 +871,7 @@
 
       renderGuessList(msg.guesses, msg.won)
       renderScoreboard(msg.scores, 'score-body')
+      if (msg.sessionScores) renderScoreboard(msg.sessionScores, 'session-score-body')
       renderPlayers(msg.players)
 
       if (msg.won && msg.winner) {
@@ -869,7 +882,8 @@
             : '?',
           winner: msg.winner,
           guesses: msg.guesses,
-          scores: msg.scores
+          scores: msg.scores,
+          sessionScores: msg.sessionScores
         })
       }
     }
