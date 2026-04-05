@@ -333,18 +333,25 @@
 
     /* ── Guess result toast ── */
     #guess-toast {
+      position: absolute;
+      left: 1rem;
+      right: 1rem;
+      bottom: -0.5rem;
+      transform: translateY(100%);
       font-size: 0.85rem;
       font-weight: 600;
       border-radius: 6px;
       padding: 0.45rem 0.8rem;
-      display: none;
-      animation: toast-fade 3s ease forwards;
+      z-index: 50;
+      opacity: 0;
+      pointer-events: none;
     }
 
     #guess-toast.visible {
       display: flex;
       align-items: center;
       gap: 0.5rem;
+      animation: toast-fade 3s ease forwards;
     }
 
     @keyframes toast-fade {
@@ -597,7 +604,7 @@
 
     <!-- Left column -->
     <div class="col-left">
-      <div class="card">
+      <div class="card" style="position:relative;">
         <div class="guess-row">
           <input
             id="guess-input"
