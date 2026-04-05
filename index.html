@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Collaborative Contexto</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #1e293b;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --gold: #fbbf24;
+      --green: #22c55e;
+      --yellow-green: #84cc16;
+      --orange: #f97316;
+      --red: #ef4444;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── Modal ── */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-backdrop.hidden {
+      display: none;
+    }
+
+    .modal-card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 2rem;
+      width: 100%;
+      max-width: 380px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .modal-card h2 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .modal-card p {
+      color: var(--text-muted);
+      text-align: center;
+      font-size: 0.9rem;
+    }
+
+    /* ── Win Overlay ── */
+    #win-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      z-index: 900;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    #win-overlay.hidden {
+      display: none;
+    }
+
+    .win-card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 2rem;
+      width: 100%;
+      max-width: 480px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .win-word {
+      font-size: 2rem;
+      font-weight: 800;
+      text-align: center;
+      color: var(--primary);
+    }
+
+    .win-subtitle {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 1rem;
+    }
+
+    .win-meta {
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--card-bg);
+      border-bottom: 1px solid var(--border);
+      padding: 0 1.25rem;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    }
+
+    .header-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--primary);
+      white-space: nowrap;
+    }
+
+    .header-game {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    .header-spacer {
+      flex: 1;
+    }
+
+    .header-player {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .edit-name-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-muted);
+      padding: 2px 4px;
+      border-radius: 4px;
+      line-height: 1;
+      font-size: 0.9rem;
+      transition: color 0.15s;
+    }
+
+    .edit-name-btn:hover {
+      color: var(--primary);
+    }
+
+    #edit-name-input {
+      font-size: 0.85rem;
+      padding: 3px 7px;
+      border: 1px solid var(--primary);
+      border-radius: 6px;
+      outline: none;
+      width: 110px;
+    }
+
+    /* ── Game Selector Bar ── */
+    .selector-bar {
+      background: var(--card-bg);
+      border-bottom: 1px solid var(--border);
+      padding: 0.5rem 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .selector-bar label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    /* ── Main layout ── */
+    .main-wrap {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 1.25rem;
+      display: flex;
+      gap: 1.25rem;
+      align-items: flex-start;
+    }
+
+    .col-left {
+      flex: 0 0 65%;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .col-right {
+      flex: 0 0 calc(35% - 1.25rem);
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    @media (max-width: 768px) {
+      .main-wrap {
+        flex-direction: column;
+      }
+
+      .col-left, .col-right {
+        flex: none;
+        width: 100%;
+      }
+    }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      padding: 1rem;
+    }
+
+    .card-title {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      margin-bottom: 0.75rem;
+    }
+
+    /* ── Guess input row ── */
+    .guess-row {
+      display: flex;
+      align-items: stretch;
+    }
+
+    .guess-row input {
+      flex: 1;
+      border: 1.5px solid var(--border);
+      border-right: none;
+      border-radius: 8px 0 0 8px;
+      padding: 0.55rem 0.85rem;
+      font-size: 1rem;
+      outline: none;
+      color: var(--text);
+      background: var(--card-bg);
+      transition: border-color 0.15s;
+    }
+
+    .guess-row input:focus {
+      border-color: var(--primary);
+    }
+
+    .guess-row input:disabled {
+      background: var(--bg);
+      color: var(--text-muted);
+      cursor: not-allowed;
+    }
+
+    .guess-row button {
+      border: 1.5px solid var(--primary);
+      border-radius: 0 8px 8px 0;
+      background: var(--primary);
+      color: #fff;
+      padding: 0.55rem 1.1rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s, border-color 0.15s;
+    }
+
+    .guess-row button:hover:not(:disabled) {
+      background: var(--primary-hover);
+      border-color: var(--primary-hover);
+    }
+
+    .guess-row button:disabled {
+      background: var(--text-muted);
+      border-color: var(--text-muted);
+      cursor: not-allowed;
+    }
+
+    .guess-meta {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 0.3rem;
+    }
+
+    /* ── Error message ── */
+    #error-msg {
+      font-size: 0.85rem;
+      color: var(--red);
+      background: #fff1f2;
+      border: 1px solid #fecdd3;
+      border-radius: 6px;
+      padding: 0.45rem 0.8rem;
+      display: none;
+    }
+
+    #error-msg.visible {
+      display: block;
+    }
+
+    /* ── Guess list ── */
+    #guess-list-wrap {
+      max-height: calc(100vh - 280px);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .guess-row-item {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.35rem 0.5rem;
+      border-radius: 8px;
+      background: var(--bg);
+      transition: background 0.15s;
+      min-height: 36px;
+    }
+
+    .guess-row-item:hover {
+      background: #f1f5f9;
+    }
+
+    .dist-badge {
+      min-width: 42px;
+      text-align: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 6px;
+      color: #fff;
+      flex-shrink: 0;
+    }
+
+    .guess-bar-wrap {
+      flex: 1;
+      min-width: 0;
+      height: 8px;
+      background: var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .guess-bar {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.4s ease;
+    }
+
+    .guess-word {
+      font-size: 0.9rem;
+      font-weight: 600;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .player-pill {
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 999px;
+      color: #fff;
+      flex-shrink: 0;
+      opacity: 0.85;
+    }
+
+    /* ── Players section ── */
+    #players-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      min-height: 28px;
+    }
+
+    /* ── Scoreboard ── */
+    .score-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    .score-table th {
+      text-align: left;
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      padding: 0.3rem 0.4rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .score-table th:last-child {
+      text-align: right;
+    }
+
+    .score-table td {
+      padding: 0.35rem 0.4rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+
+    .score-table td:last-child {
+      text-align: right;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .score-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* ── Buttons ── */
+    .btn {
+      border: none;
+      border-radius: 8px;
+      padding: 0.5rem 1rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+    }
+
+    .btn-secondary {
+      background: var(--border);
+      color: var(--text);
+    }
+
+    .btn-secondary:hover {
+      background: #cbd5e1;
+    }
+
+    /* ── Generic input ── */
+    .input {
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.9rem;
+      outline: none;
+      color: var(--text);
+      background: var(--card-bg);
+      transition: border-color 0.15s;
+    }
+
+    .input:focus {
+      border-color: var(--primary);
+    }
+
+    /* ── Number input ── */
+    input[type='number'] {
+      -moz-appearance: textfield;
+    }
+
+    input[type='number']::-webkit-outer-spin-button,
+    input[type='number']::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Name Modal -->
+  <div id="name-modal" class="modal-backdrop">
+    <div class="modal-card">
+      <h2>Collaborative Contexto</h2>
+      <p>Enter your name to join the game. Your teammates will see your guesses in real time.</p>
+      <input
+        id="name-input"
+        class="input"
+        type="text"
+        placeholder="Your name"
+        maxlength="32"
+        autocomplete="off"
+      />
+      <button id="name-submit" class="btn btn-primary">Let's Play</button>
+    </div>
+  </div>
+
+  <!-- Win Overlay -->
+  <div id="win-overlay" class="hidden">
+    <div class="win-card">
+      <div style="text-align:center;font-size:2rem;">🎉</div>
+      <div class="win-word" id="win-word"></div>
+      <div class="win-subtitle" id="win-subtitle"></div>
+      <div class="win-meta" id="win-meta"></div>
+      <table class="score-table" id="win-score-table">
+        <thead>
+          <tr><th>Player</th><th>Score</th></tr>
+        </thead>
+        <tbody id="win-score-body"></tbody>
+      </table>
+      <button class="btn btn-primary" id="play-another-btn">Play Another Game</button>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header>
+    <div class="header-title">Collaborative Contexto</div>
+    <div class="header-game" id="header-game-num">Game #—</div>
+    <div class="header-spacer"></div>
+    <div class="header-player" id="header-player-wrap">
+      <span id="header-player-name"></span>
+      <button class="edit-name-btn" id="edit-name-btn" title="Edit name">&#9998;</button>
+      <input
+        id="edit-name-input"
+        class="hidden"
+        type="text"
+        maxlength="32"
+        autocomplete="off"
+      />
+    </div>
+  </header>
+
+  <!-- Game Selector Bar -->
+  <div class="selector-bar">
+    <label for="game-number-input">Game #</label>
+    <input
+      id="game-number-input"
+      class="input"
+      type="number"
+      min="1"
+      style="width:90px;"
+      placeholder="1295"
+    />
+    <button class="btn btn-primary" id="go-btn">Go</button>
+    <button class="btn btn-secondary" id="today-btn">Today's Game</button>
+  </div>
+
+  <!-- Main content -->
+  <div class="main-wrap">
+
+    <!-- Left column -->
+    <div class="col-left">
+      <div class="card">
+        <div class="guess-row">
+          <input
+            id="guess-input"
+            type="text"
+            placeholder="Type a word and press Enter…"
+            autocomplete="off"
+            autocorrect="off"
+            autocapitalize="off"
+            spellcheck="false"
+          />
+          <button id="guess-btn">Guess</button>
+        </div>
+        <div class="guess-meta" id="guess-count">0 guesses</div>
+        <div id="error-msg"></div>
+      </div>
+
+      <div class="card" style="padding:0.75rem 1rem;">
+        <div class="card-title">Guesses</div>
+        <div id="guess-list-wrap">
+          <div id="guess-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right column -->
+    <div class="col-right">
+      <div class="card">
+        <div class="card-title">Players</div>
+        <div id="players-list"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Scoreboard</div>
+        <table class="score-table">
+          <thead>
+            <tr><th>Player</th><th>Score</th></tr>
+          </thead>
+          <tbody id="score-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    'use strict'
+
+    // ── State ──────────────────────────────────────────────────────────
+    let playerName = localStorage.getItem('contexto-player-name')
+    let ws = null
+    let currentGame = null
+    let reconnectDelay = 2000
+    const MAX_RECONNECT = 30000
+    let errorTimer = null
+    let editingName = false
+
+    // ── Color helpers ──────────────────────────────────────────────────
+    const PILL_COLORS = [
+      '#6366f1', '#ec4899', '#14b8a6', '#f97316',
+      '#8b5cf6', '#06b6d4', '#84cc16', '#ef4444'
+    ]
+
+    function playerColor (name) {
+      let hash = 0
+      for (let i = 0; i < name.length; i++) {
+        hash = (hash * 31 + name.charCodeAt(i)) >>> 0
+      }
+      return PILL_COLORS[hash % PILL_COLORS.length]
+    }
+
+    function distColor (distance) {
+      if (distance === 0) return 'var(--gold)'
+      if (distance <= 10) return 'var(--green)'
+      if (distance <= 100) return 'var(--yellow-green)'
+      if (distance <= 300) return 'var(--orange)'
+      return 'var(--red)'
+    }
+
+    function calcPoints (distance) {
+      if (distance === 0) return 100
+      if (distance <= 10) return 50
+      if (distance <= 100) return 20
+      if (distance <= 300) return 5
+      return 0
+    }
+
+    // ── Error display ──────────────────────────────────────────────────
+    function showError (message) {
+      const el = document.getElementById('error-msg')
+      el.textContent = message
+      el.classList.add('visible')
+      if (errorTimer) clearTimeout(errorTimer)
+      errorTimer = setTimeout(() => {
+        el.classList.remove('visible')
+      }, 3000)
+    }
+
+    // ── Guess list rendering ───────────────────────────────────────────
+    function renderGuessList (guesses, won) {
+      const wrap = document.getElementById('guess-list-wrap')
+      const list = document.getElementById('guess-list')
+
+      // Track scroll position to decide whether to auto-scroll
+      const atBottom = wrap.scrollHeight - wrap.scrollTop <= wrap.clientHeight + 8
+
+      list.innerHTML = ''
+
+      for (const g of guesses) {
+        const barWidth = Math.max(5, 100 - g.distance * 0.15)
+        const color = distColor(g.distance)
+        const pColor = playerColor(g.player)
+
+        const row = document.createElement('div')
+        row.className = 'guess-row-item'
+
+        const badge = document.createElement('span')
+        badge.className = 'dist-badge'
+        badge.style.background = color
+        badge.textContent = g.distance
+
+        const barWrap = document.createElement('div')
+        barWrap.className = 'guess-bar-wrap'
+
+        const bar = document.createElement('div')
+        bar.className = 'guess-bar'
+        bar.style.width = barWidth + '%'
+        bar.style.background = color
+        barWrap.appendChild(bar)
+
+        const wordEl = document.createElement('span')
+        wordEl.className = 'guess-word'
+        wordEl.textContent = g.word
+
+        const pill = document.createElement('span')
+        pill.className = 'player-pill'
+        pill.style.background = pColor
+        pill.textContent = g.player
+
+        row.appendChild(badge)
+        row.appendChild(barWrap)
+        row.appendChild(wordEl)
+        row.appendChild(pill)
+        list.appendChild(row)
+      }
+
+      document.getElementById('guess-count').textContent =
+        guesses.length + (guesses.length === 1 ? ' guess' : ' guesses')
+
+      if (atBottom) {
+        wrap.scrollTop = wrap.scrollHeight
+      }
+
+      const guessInput = document.getElementById('guess-input')
+      const guessBtn = document.getElementById('guess-btn')
+      guessInput.disabled = !!won
+      guessBtn.disabled = !!won
+    }
+
+    // ── Scoreboard rendering ───────────────────────────────────────────
+    function renderScoreboard (scores, bodyId) {
+      const tbody = document.getElementById(bodyId)
+      tbody.innerHTML = ''
+
+      const sorted = Object.entries(scores).sort((a, b) => b[1] - a[1])
+
+      for (const [name, score] of sorted) {
+        const tr = document.createElement('tr')
+        const nameTd = document.createElement('td')
+        const scoreTd = document.createElement('td')
+
+        const dot = document.createElement('span')
+        dot.style.cssText =
+          'display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:' +
+          playerColor(name)
+        nameTd.appendChild(dot)
+        nameTd.appendChild(document.createTextNode(name))
+
+        scoreTd.textContent = score
+        tr.appendChild(nameTd)
+        tr.appendChild(scoreTd)
+        tbody.appendChild(tr)
+      }
+    }
+
+    // ── Players list rendering ─────────────────────────────────────────
+    function renderPlayers (players) {
+      const el = document.getElementById('players-list')
+      el.innerHTML = ''
+      for (const name of players) {
+        const pill = document.createElement('span')
+        pill.className = 'player-pill'
+        pill.style.background = playerColor(name)
+        pill.style.fontSize = '0.78rem'
+        pill.style.padding = '3px 10px'
+        pill.textContent = name
+        el.appendChild(pill)
+      }
+    }
+
+    // ── Win overlay ────────────────────────────────────────────────────
+    function renderWin (msg) {
+      document.getElementById('win-word').textContent = msg.word
+      document.getElementById('win-subtitle').textContent =
+        msg.winner + ' found it!'
+      document.getElementById('win-meta').textContent =
+        msg.guesses.length + ' total ' + (msg.guesses.length === 1 ? 'guess' : 'guesses')
+
+      renderScoreboard(msg.scores, 'win-score-body')
+
+      document.getElementById('win-overlay').classList.remove('hidden')
+
+      const guessInput = document.getElementById('guess-input')
+      const guessBtn = document.getElementById('guess-btn')
+      guessInput.disabled = true
+      guessBtn.disabled = true
+    }
+
+    // ── Full state render ──────────────────────────────────────────────
+    function renderState (msg) {
+      document.getElementById('header-game-num').textContent = 'Game #' + msg.gameNumber
+      document.getElementById('game-number-input').value = msg.gameNumber
+
+      renderGuessList(msg.guesses, msg.won)
+      renderScoreboard(msg.scores, 'score-body')
+      renderPlayers(msg.players)
+
+      if (msg.won && msg.winner) {
+        // Build a synthetic won message from state
+        renderWin({
+          word: msg.guesses.find(g => g.distance === 0)
+            ? msg.guesses.find(g => g.distance === 0).word
+            : '?',
+          winner: msg.winner,
+          guesses: msg.guesses,
+          scores: msg.scores
+        })
+      }
+    }
+
+    // ── WebSocket ──────────────────────────────────────────────────────
+    function connect (gameNumber, player) {
+      if (ws) ws.close()
+      currentGame = gameNumber
+      const proto = location.protocol === 'https:' ? 'wss' : 'ws'
+      ws = new WebSocket(proto + '://' + location.host)
+
+      ws.onopen = function () {
+        reconnectDelay = 2000
+        ws.send(JSON.stringify({ type: 'join', gameNumber: gameNumber, player: player }))
+      }
+
+      ws.onmessage = function (event) {
+        const msg = JSON.parse(event.data)
+        if (msg.type === 'state') renderState(msg)
+        if (msg.type === 'error') showError(msg.message)
+        if (msg.type === 'won') renderWin(msg)
+      }
+
+      ws.onclose = function () {
+        setTimeout(function () {
+          connect(currentGame, playerName)
+        }, reconnectDelay)
+        reconnectDelay = Math.min(reconnectDelay * 1.5, MAX_RECONNECT)
+      }
+    }
+
+    // ── Guess submission ───────────────────────────────────────────────
+    function submitGuess () {
+      const input = document.getElementById('guess-input')
+      const word = input.value.trim()
+      if (!word) return
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        showError('Not connected. Reconnecting…')
+        return
+      }
+      ws.send(JSON.stringify({
+        type: 'guess',
+        gameNumber: currentGame,
+        player: playerName,
+        word: word
+      }))
+      input.value = ''
+      input.focus()
+    }
+
+    // ── Game switching ─────────────────────────────────────────────────
+    function goToGame (gameNumber) {
+      if (!gameNumber || gameNumber < 1) {
+        showError('Please enter a valid game number.')
+        return
+      }
+      document.getElementById('win-overlay').classList.add('hidden')
+      connect(gameNumber, playerName)
+    }
+
+    function fetchTodayAndConnect () {
+      fetch('/api/today')
+        .then(function (r) { return r.json() })
+        .then(function (data) {
+          document.getElementById('win-overlay').classList.add('hidden')
+          document.getElementById('game-number-input').value = data.gameNumber
+          connect(data.gameNumber, playerName)
+        })
+    }
+
+    // ── Name modal logic ───────────────────────────────────────────────
+    function submitName () {
+      const input = document.getElementById('name-input')
+      const name = input.value.trim()
+      if (!name) {
+        input.focus()
+        return
+      }
+      playerName = name
+      localStorage.setItem('contexto-player-name', playerName)
+      document.getElementById('name-modal').classList.add('hidden')
+      document.getElementById('header-player-name').textContent = playerName
+      fetchTodayAndConnect()
+    }
+
+    // ── Edit name logic ────────────────────────────────────────────────
+    function startEditName () {
+      if (editingName) return
+      editingName = true
+      const nameSpan = document.getElementById('header-player-name')
+      const editInput = document.getElementById('edit-name-input')
+      nameSpan.style.display = 'none'
+      editInput.value = playerName || ''
+      editInput.classList.remove('hidden')
+      editInput.style.display = ''
+      editInput.focus()
+      editInput.select()
+    }
+
+    function commitEditName () {
+      const editInput = document.getElementById('edit-name-input')
+      const nameSpan = document.getElementById('header-player-name')
+      const newName = editInput.value.trim()
+      if (newName && newName !== playerName) {
+        playerName = newName
+        localStorage.setItem('contexto-player-name', playerName)
+        if (currentGame) connect(currentGame, playerName)
+      }
+      nameSpan.textContent = playerName
+      nameSpan.style.display = ''
+      editInput.classList.add('hidden')
+      editInput.style.display = 'none'
+      editingName = false
+    }
+
+    // ── DOM ready ──────────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', function () {
+      // Name modal
+      if (!playerName) {
+        document.getElementById('name-modal').classList.remove('hidden')
+      } else {
+        document.getElementById('name-modal').classList.add('hidden')
+        document.getElementById('header-player-name').textContent = playerName
+        fetchTodayAndConnect()
+      }
+
+      // Name modal events
+      document.getElementById('name-submit').addEventListener('click', submitName)
+      document.getElementById('name-input').addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') submitName()
+      })
+
+      // Guess events
+      document.getElementById('guess-btn').addEventListener('click', submitGuess)
+      document.getElementById('guess-input').addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') submitGuess()
+      })
+
+      // Game selector events
+      document.getElementById('go-btn').addEventListener('click', function () {
+        const val = parseInt(document.getElementById('game-number-input').value, 10)
+        goToGame(val)
+      })
+
+      document.getElementById('game-number-input').addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+          const val = parseInt(document.getElementById('game-number-input').value, 10)
+          goToGame(val)
+        }
+      })
+
+      document.getElementById('today-btn').addEventListener('click', fetchTodayAndConnect)
+
+      // Play another
+      document.getElementById('play-another-btn').addEventListener('click', fetchTodayAndConnect)
+
+      // Edit name
+      document.getElementById('edit-name-btn').addEventListener('click', startEditName)
+
+      const editInput = document.getElementById('edit-name-input')
+      editInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') commitEditName()
+        if (e.key === 'Escape') {
+          // Cancel without saving
+          const nameSpan = document.getElementById('header-player-name')
+          nameSpan.style.display = ''
+          editInput.classList.add('hidden')
+          editInput.style.display = 'none'
+          editingName = false
+        }
+      })
+      editInput.addEventListener('blur', commitEditName)
+    })
+  </script>
+</body>
+</html>
