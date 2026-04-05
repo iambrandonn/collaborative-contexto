@@ -331,6 +331,28 @@
       display: block;
     }
 
+    /* ── Guess result toast ── */
+    #guess-toast {
+      font-size: 0.85rem;
+      font-weight: 600;
+      border-radius: 6px;
+      padding: 0.45rem 0.8rem;
+      display: none;
+      animation: toast-fade 3s ease forwards;
+    }
+
+    #guess-toast.visible {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    @keyframes toast-fade {
+      0% { opacity: 1; }
+      75% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+
     /* ── Guess list ── */
     #guess-list-wrap {
       max-height: calc(100vh - 280px);
@@ -590,6 +612,7 @@
         </div>
         <div class="guess-meta" id="guess-count">0 guesses</div>
         <div id="error-msg"></div>
+        <div id="guess-toast"></div>
       </div>
 
       <div class="card" style="padding:0.75rem 1rem;">
@@ -660,6 +683,26 @@
       if (distance <= 100) return 20
       if (distance <= 300) return 5
       return 0
+    }
+
+    // ── Guess result toast ────────────────────────────────────────────
+    let toastTimer = null
+    function showGuessResult (word, distance) {
+      const el = document.getElementById('guess-toast')
+      const color = distColor(distance)
+      const pts = calcPoints(distance)
+      el.style.background = color + '18'
+      el.style.border = '1px solid ' + color
+      el.style.color = 'var(--text)'
+      el.innerHTML = '<span style="font-weight:800;color:' + color + '">#' + distance + '</span> ' +
+        word + (pts > 0 ? ' <span style="color:var(--text-muted)">(+' + pts + ' pts)</span>' : '')
+      el.classList.remove('visible')
+      void el.offsetWidth // reset animation
+      el.classList.add('visible')
+      if (toastTimer) clearTimeout(toastTimer)
+      toastTimer = setTimeout(function () {
+        el.classList.remove('visible')
+      }, 3000)
     }
 
     // ── Error display ──────────────────────────────────────────────────
@@ -835,6 +878,7 @@
         const msg = JSON.parse(event.data)
         if (msg.type === 'state') renderState(msg)
         if (msg.type === 'error') showError(msg.message)
+        if (msg.type === 'guessResult') showGuessResult(msg.word, msg.distance)
         if (msg.type === 'won') renderWin(msg)
       }
 

@@ -156,6 +156,9 @@ wss.on('connection', (ws) => {
       game.guesses.push({ word: lemma, distance, player, timestamp: Date.now() })
       game.guesses.sort((a, b) => a.distance - b.distance)
 
+      // Send result feedback to the guesser
+      ws.send(JSON.stringify({ type: 'guessResult', word: lemma, distance }))
+
       if (distance === 0) {
         game.won = true
         game.winner = player
