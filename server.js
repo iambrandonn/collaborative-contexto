@@ -146,7 +146,9 @@ wss.on('connection', (ws) => {
         return
       }
 
-      const { distance, lemma } = data
+      const distance = Number(data.distance)
+      const lemma = data.lemma
+      console.log(`[guess] player=${player} word=${normalized} lemma=${lemma} distance=${distance} game=${gameNumber}`)
 
       // Check if lemma already guessed
       if (game.guesses.some(g => g.word === lemma)) {
@@ -178,9 +180,10 @@ wss.on('connection', (ws) => {
           scores: calcScores(game.guesses),
           sessionScores
         })
-      } else {
-        broadcast(gameNumber, stateMessage(gameNumber))
       }
+
+      // Always broadcast state so all clients stay in sync
+      broadcast(gameNumber, stateMessage(gameNumber))
     }
   })
 
