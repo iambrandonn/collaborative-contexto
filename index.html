@@ -817,8 +817,12 @@
 
     // ── WebSocket ──────────────────────────────────────────────────────
     function connect (gameNumber, player) {
-      if (ws) ws.close()
+      if (ws) {
+        ws.onclose = null // prevent old onclose from triggering reconnect
+        ws.close()
+      }
       currentGame = gameNumber
+      updateUrl(gameNumber)
       const proto = location.protocol === 'https:' ? 'wss' : 'ws'
       ws = new WebSocket(proto + '://' + location.host)
 
@@ -861,6 +865,19 @@
       input.focus()
     }
 
+    // ── URL handling ──────────────────────────────────────────────────
+    function getGameFromUrl () {
+      const params = new URLSearchParams(window.location.search)
+      const game = parseInt(params.get('game'), 10)
+      return game > 0 ? game : null
+    }
+
+    function updateUrl (gameNumber) {
+      const url = new URL(window.location)
+      url.searchParams.set('game', gameNumber)
+      window.history.replaceState(null, '', url)
+    }
+
     // ── Game switching ─────────────────────────────────────────────────
     function goToGame (gameNumber) {
       if (!gameNumber || gameNumber < 1) {
@@ -893,7 +910,13 @@
       localStorage.setItem('contexto-player-name', playerName)
       document.getElementById('name-modal').classList.add('hidden')
       document.getElementById('header-player-name').textContent = playerName
-      fetchTodayAndConnect()
+      var urlGame = getGameFromUrl()
+      if (urlGame) {
+        document.getElementById('game-number-input').value = urlGame
+        connect(urlGame, playerName)
+      } else {
+        fetchTodayAndConnect()
+      }
     }
 
     // ── Edit name logic ────────────────────────────────────────────────
@@ -934,7 +957,13 @@
       } else {
         document.getElementById('name-modal').classList.add('hidden')
         document.getElementById('header-player-name').textContent = playerName
-        fetchTodayAndConnect()
+        var urlGame = getGameFromUrl()
+        if (urlGame) {
+          document.getElementById('game-number-input').value = urlGame
+          connect(urlGame, playerName)
+        } else {
+          fetchTodayAndConnect()
+        }
       }
 
       // Name modal events
